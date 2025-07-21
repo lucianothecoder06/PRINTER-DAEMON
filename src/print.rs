@@ -6,6 +6,28 @@ use std::error::Error as StdError;
 use std::time::Duration;
 use qrcode::QrCode;
 use image::{Luma, DynamicImage};
+use rocket::request::{FromRequest, Outcome , Request};
+use rocket::http::Status;
+
+pub struct TokenAuth;
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for TokenAuth {
+    type Error = ();
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, ()> {
+        const SECRET: &str = "abc123supersecrettoken";
+
+        if let Some(auth_header) = req.headers().get_one("Authorization") {
+            if auth_header == format!("Bearer {}", SECRET) {
+                return Outcome::Success(TokenAuth);
+            }
+        }
+        Outcome::Error((Status::Unauthorized, ()))
+    }
+}
+
+
 
 /// Line: one printable line of text with formatting & optional QR
 #[derive(Deserialize, Clone)]
@@ -191,7 +213,7 @@ pub fn print_receipt() -> String {
 }
 
 #[post("/print", format = "json", data = "<print_info>")]
-pub fn print_receipt_info(print_info: Json<PrintInfo>) -> String {
+pub fn print_receipt_info(_auth: TokenAuth, print_info: Json<PrintInfo>) -> String {
     println!(
         "Received VID: {}, PID: {}, Name: {}",
         print_info.vid, print_info.pid, print_info.name
