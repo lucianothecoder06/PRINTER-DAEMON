@@ -1,0 +1,13 @@
+[package]
+name = "PRINTER-DAEMON"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+image = "0.25.6"
+qrcode = "0.14.1"
+
+rocket = { version = "0.5.1", features = ["json"] }
+
+rusb = "0.9.4"
+serde = "1.0.219"
