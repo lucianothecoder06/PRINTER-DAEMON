@@ -1,13 +1,13 @@
+use image::{DynamicImage, Luma};
+use qrcode::QrCode;
+use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::json::Json;
 use rocket::{get, post};
 use rusb::{Context, UsbContext};
 use serde::Deserialize;
 use std::error::Error as StdError;
 use std::time::Duration;
-use qrcode::QrCode;
-use image::{Luma, DynamicImage};
-use rocket::request::{FromRequest, Outcome , Request};
-use rocket::http::Status;
 
 pub struct TokenAuth;
 
@@ -24,18 +24,17 @@ impl<'r> FromRequest<'r> for TokenAuth {
             }
         }
         Outcome::Error((Status::Unauthorized, ()))
+        //   return Outcome::Success(TokenAuth);
     }
 }
-
-
 
 /// Line: one printable line of text with formatting & optional QR
 #[derive(Deserialize, Clone)]
 pub struct Line {
     pub text: String,
-    pub center: bool,
-    pub bold: bool,
-    pub double_size: bool,
+    pub center: Option<bool>,
+    pub bold: Option<bool>,
+    pub double_size: Option<bool>,
     pub qr: Option<String>,
 }
 
@@ -99,21 +98,21 @@ fn compose_print_data(lines: Vec<Line>) -> Vec<u8> {
 
     for line in lines {
         // Alignment
-        if line.center {
+        if line.center.unwrap_or(false) {
             data.extend_from_slice(b"\x1B\x61\x01");
         } else {
             data.extend_from_slice(b"\x1B\x61\x00");
         }
 
         // Bold
-        if line.bold {
+        if line.bold.unwrap_or(false) {
             data.extend_from_slice(b"\x1B\x45\x01");
         } else {
             data.extend_from_slice(b"\x1B\x45\x00");
         }
 
         // Double size
-        if line.double_size {
+        if line.double_size.unwrap_or(false) {
             data.extend_from_slice(b"\x1D\x21\x11");
         } else {
             data.extend_from_slice(b"\x1D\x21\x00");
@@ -205,6 +204,14 @@ fn print_to_thermal_printer(vid: u16, pid: u16, lines: Vec<Line>) -> Result<(), 
 
 #[get("/print")]
 pub fn print_receipt() -> String {
+    match print_to_thermal_printer(0x0FE6, 0x811E, Vec::new()) {
+        Ok(_) => println!("Printed successfully."),
+        Err(e) => eprintln!("Printing failed: {}", e),
+    }
+    format!("User: oscar")
+}
+#[options("/print")]
+pub fn print_receipt_options() -> String {
     match print_to_thermal_printer(0x0FE6, 0x811E, Vec::new()) {
         Ok(_) => println!("Printed successfully."),
         Err(e) => eprintln!("Printing failed: {}", e),
